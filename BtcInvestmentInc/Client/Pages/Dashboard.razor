@@ -1,0 +1,146 @@
+﻿@page "/dashboard"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@using BtcInvestmentInc.Client.Controls
+@using Newtonsoft.Json
+@using System.Net.Http.Headers
+@using Blazored.LocalStorage
+
+@attribute [Authorize]
+@inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorage
+@inject HttpClient Client
+           
+<AuthorizeView>
+	<Authorized>
+		<Container Fluid="true" Class="pl-1 pr-1 pt-1 pb-1 pl-md-2 pr-md-2 pt-md-2 pb-md-2 pl-lg-3 pr-lg-3 pt-lg-3 pb-lg-3">
+			<Row>
+				<Column ColumnSize="ColumnSize.Is12.OnMobile.Is4.OnDesktop">
+					<Card Class="border-0 bg-white">
+						<CardHeader Class="border-0 bg-white mb-2">
+							<Image Class="img-fluid border-0" Source="images/logo1.png"/>
+						</CardHeader>
+						<CardBody Class="bg-dull border-primary">
+							<h4 class="text-center font-weight-bold">Current Investments</h4>
+							<hr/>
+							<Investment Investments="@CurrentInvestments"/>
+						</CardBody>
+					</Card>
+				</Column>
+				<Column Class="bg-dull p-3" ColumnSize="ColumnSize.Is12.OnMobile.Is4.OnDesktop">
+					<Container Fluid="true" Class="bg-white height-100">
+						<Tabs SelectedTab="Settings">
+							<Items>
+								<Tab Name="Settings">Settings</Tab>
+								<Tab Name="Help">Help</Tab>
+							</Items>
+							<Content>
+								<TabPanel Name="Settings" Class="bg-white height-100">
+									<Settings/>
+								</TabPanel>
+								<TabPanel Name="Help" Class="bg-white height-100">
+									<BtcInvestmentInc.Client.Controls.Help />
+								</TabPanel>
+							</Content>
+						</Tabs>
+					</Container>
+				</Column>
+				<Column Class="mt-4 mt-lg-0" ColumnSize="ColumnSize.Is12.OnMobile.Is4.OnDesktop">
+					<Card Class="border-0 bg-white height-100">
+						<CardHeader Class="border-0 bg-white">
+							<Row>
+								<Column>
+									<div class="mb-3">
+										<label class="font-20">@(context.User.FindFirst("username")?.Value ?? "Username")</label>
+										<Button Class="float-right" Color="Color.Danger" @onclick="Logout">Logout</Button>
+									</div>
+								</Column>
+							</Row>
+						</CardHeader>
+						<CardBody Class="bg-dull">
+							<h4 class="text-center font-weight-bold">Investment History</h4>
+							<hr />
+							<Investment Investments="@InvestmentsHistory" />
+						</CardBody>
+					</Card>
+				</Column>
+			</Row>
+			<Row Class="mt-3">
+				@foreach (var plan in DepositPlanDetail.CurrentPlans)
+				{
+					<Column ColumnSize="ColumnSize.Is12.OnMobile.Is6.OnTablet.Is3.OnDesktop" Class="col-lg mb-3">
+						<DepositPlan Detail="@plan" StartInvestment="@InvestNow"/>
+					</Column>
+				}
+			</Row>
+		</Container>
+		<PaymentModal @ref="@_payment" CurrentPlan="@_selectedDepositPlan"/>
+	</Authorized>
+</AuthorizeView>
+
+@code
+{
+	public List<InvestmentDetail> CurrentInvestments { get; set; }
+	public List<InvestmentDetail> InvestmentsHistory { get; set; }
+	public List<DepositPlan> DepositPlans { get; set; }
+
+	[CascadingParameter]
+	private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+	public void InvestNow(DepositPlanDetail detail)
+	{
+		_selectedDepositPlan = detail;
+		_payment.Reset();
+		_payment.Open();
+	}
+
+	private async Task UpdateInvestment()
+	{
+		var request = new HttpRequestMessage(HttpMethod.Get, "api/user/getinvestments");
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer",(await LocalStorage.GetItemAsync<string>("token")));
+
+		var rr = await Client.SendAsync(request);
+
+		var result = await rr.Content.ReadFromJsonAsync<List<InvestmentDetail>>();
+
+		List<InvestmentDetail> l1 = new List<InvestmentDetail>();
+		List<InvestmentDetail> l2 = new List<InvestmentDetail>();
+
+		Console.WriteLine(JsonConvert.SerializeObject(result));
+
+		result.ForEach(i =>
+		{
+			var plan = DepositPlanDetail.CurrentPlans.First(d => d.Id == i.PlanId);
+			i.Profit = plan.Profit;
+
+			if (i.Date.AddDays(plan.Duration) >= DateTime.Now)
+				l1.Add(i);
+			else l2.Add(i);
+		});
+
+		InvestmentsHistory = l2;
+		CurrentInvestments = l1;
+
+		StateHasChanged();
+	}
+
+	private DepositPlanDetail _selectedDepositPlan;
+	private PaymentModal _payment;
+
+	protected override async Task OnInitializedAsync()
+	{
+		CurrentInvestments = new List<InvestmentDetail>();
+		InvestmentsHistory = new List<InvestmentDetail>();
+
+		await UpdateInvestment();
+
+		await base.OnInitializedAsync();
+	}
+
+	private async Task Logout()
+	{
+		await LocalStorage.RemoveItemAsync("token");
+		await LocalStorage.RemoveItemAsync("username");
+		NavigationManager.NavigateTo("login");
+	}
+}

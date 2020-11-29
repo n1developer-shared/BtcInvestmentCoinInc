@@ -1,0 +1,59 @@
+﻿@using BtcInvestmentInc.Shared.Models.User
+@using Blazored.LocalStorage
+@using System.Net.Http.Headers
+@using System.Text
+@using Newtonsoft.Json
+@using JsonSerializer = System.Text.Json.JsonSerializer
+@inject ILocalStorageService _storage
+@inject HttpClient _client
+
+<div class="text-center border-box p-3">
+	<h4 class="font-weight-bold">Settings</h4>
+	<hr />
+	<Field>
+		<TextEdit Text="@Profile.BtcWalletAddress" TextChanged="@((t)=>Profile.BtcWalletAddress = t)" Placeholder="BTC Wallet"></TextEdit>
+	</Field>
+	<Field>
+		<Button @onclick="Update" Color="Color.Primary">Save</Button>
+	</Field>
+</div>
+
+@code {
+	public Profile Profile { get; set; }
+
+
+
+	protected override async Task OnInitializedAsync()
+	{
+		Profile = new Profile();
+		var token = await _storage.GetItemAsync<string>("token");
+
+		var request = new HttpRequestMessage(HttpMethod.Get, "api/user/profile");
+
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var rr = await _client.SendAsync(request);
+
+		Profile = await rr.Content.ReadFromJsonAsync<Profile>();
+
+		StateHasChanged();
+	}
+
+	private async Task Update()
+	{
+		var token = await _storage.GetItemAsync<string>("token");
+
+		var request = new HttpRequestMessage(HttpMethod.Post, "api/user/updateprofile");
+
+		request.Content = new StringContent(JsonSerializer.Serialize(Profile), Encoding.UTF8, "application/json");
+
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+		var rr = await _client.SendAsync(request);
+
+		if (rr.IsSuccessStatusCode)
+		{
+			Console.WriteLine("Ok");
+		}
+	}
+}

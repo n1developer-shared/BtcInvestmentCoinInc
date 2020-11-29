@@ -1,0 +1,38 @@
+﻿<Card>
+	<CardHeader Class="card-header">
+		<h1 class="planCardTitle">@Detail.Profit%</h1>
+		<h5 class="planCardTitleHelper">@Detail.Duration Days</h5>
+	</CardHeader>
+	<CardBody>
+		<div style="text-align: center;" >
+			<div>
+				<span>Min:</span>
+				<span class="money"> @Detail.Min</span>
+			</div>
+			<div>
+				<span>Max:</span>
+				<span class="money"> @Detail.Max</span>
+			</div>
+			<div>
+				<span>Withdrawal</span>
+				<span class="money"> @(Detail.Automatic?"Automatic":"Manual")</span>
+			</div>
+		</div>
+	</CardBody>
+	<CardFooter Class="card-footer">
+		<Button @onclick="Deposit" class="mybtn" Color="Color.Primary">Deposit</Button>
+	</CardFooter>
+</Card>
+
+@code {
+	[Parameter]
+	public DepositPlanDetail Detail { get; set; }
+
+	[Parameter]
+	public EventCallback<DepositPlanDetail> StartInvestment { get; set; }
+
+	public async void Deposit()
+	{
+		await StartInvestment.InvokeAsync(Detail);
+	}
+}

@@ -1,0 +1,33 @@
+﻿@using BtcInvestmentInc.Shared.Models.Investment
+<div class="table-wrapper-scroll-y my-custom-scrollbar">
+	<Table Narrow="true" Hoverable="true" Bordered="true" Class="text-center bg-white mb-0">
+		<TableHeader>
+			<TableHeaderCell>Payment</TableHeaderCell>
+			<TableHeaderCell>Profit</TableHeaderCell>
+			<TableHeaderCell>Date</TableHeaderCell>
+		</TableHeader>
+		<TableBody>
+			@if (Investments != null)
+			{
+				foreach (var investment in Investments)
+				{
+					<TableRow>
+						<TableRowCell>@investment.Payment</TableRowCell>
+						<TableRowCell>@investment.Profit</TableRowCell>
+						<TableRowCell>@investment.Date.ToString("yy-MM-dd")</TableRowCell>
+					</TableRow>
+				}
+			}
+		</TableBody>
+	</Table>
+</div>
+
+	@code {
+		[Parameter]
+		public List<InvestmentDetail> Investments { get; set; }
+
+		public void Clear()
+		{
+			Investments?.Clear();
+		}
+	}

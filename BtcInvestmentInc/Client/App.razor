@@ -1,0 +1,21 @@
+@using BtcInvestmentInc.Client.Controls
+
+<Router AppAssembly="@typeof(Program).Assembly">
+	<Found Context="routeData">
+		@*route view*@
+		<AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+		
+			<NotAuthorized>
+				<RedirectToLogin/>
+			</NotAuthorized>
+
+		</AuthorizeRouteView>
+	</Found>
+	<NotFound>
+		<CascadingAuthenticationState>
+			<LayoutView Layout="@typeof(MainLayout)">
+				<RedirectToIndex/>
+			</LayoutView>
+		</CascadingAuthenticationState>
+	</NotFound>
+</Router>

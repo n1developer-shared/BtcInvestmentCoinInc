@@ -1,0 +1,101 @@
+﻿@page "/register"
+@using BtcInvestmentInc.Shared.Models.User
+@using BtcInvestmentInc.Shared.ViewModel
+@using Newtonsoft.Json
+@inject NavigationManager nav 
+@inject HttpClient client
+
+<div class="container-fluid bg-dull">
+	<Row class="justify-content-center">
+		<Column class="p-0 m-0 d-none d-lg-block" ColumnSize="ColumnSize.Is7.OnWidescreen.Is6.OnFullHD">
+			<img src="images/side2.png" class="img-fluid" />
+		</Column>
+		<Column class="justify-content-center align-bottom pt-5" ColumnSize="ColumnSize.Is5.OnWidescreen.Is6.OnFullHD.Is6.OnDesktop.Is8.OnTablet.Is12.OnMobile">
+			<h1 class="text-center mb-5">Register</h1>
+
+			<Field>
+				<TextEdit Text="@regModel.Username" TextChanged="@((text)=>regModel.Username = text)" Class="my-input mb-3" Placeholder="Username"></TextEdit>
+			</Field>
+			<Field>
+				<TextEdit Text="@regModel.Email" TextChanged="@((text)=>regModel.Email= text)" Class="my-input mb-3" Placeholder="Email"></TextEdit>
+			</Field><Field>
+				<TextEdit type="password" Text="@regModel.Password" TextChanged="@((text)=>regModel.Password= text)" Class="my-input mb-3" Placeholder="Password"></TextEdit>
+			</Field>
+			<Field>
+				<TextEdit type="password" Text="@regModel.ConfirmPassword" TextChanged="@((text)=>regModel.ConfirmPassword= text)" Class="my-input mb-3" Placeholder="Confirm Password"></TextEdit>
+			</Field>
+			<hr />
+			<Alert @ref="@ErrorAlert" Color="@Type">
+				<AlertMessage>
+					@ErrorMessage
+					<ul>
+						@foreach (var error in Errors)
+						{
+							<li>@error</li>
+						}
+					</ul>
+				</AlertMessage>
+				<CloseButton></CloseButton>
+			</Alert>
+			<Button @onclick="TryRegister" class="form-control mt-2 mb-2 primary form-button" Color="Color.Primary"> Register </Button>
+			<hr />
+			<div class="text-center"><a href="login">Login Here</a></div>
+		</Column>
+	</Row>
+</div>
+
+@code {
+	private RegistrationModel regModel;
+	private Alert ErrorAlert;
+	private string ErrorMessage = "";
+	private List<string> Errors;
+
+	private Blazorise.Color Type = Color.Danger;
+
+	protected override void OnInitialized()
+	{
+		Errors = new List<string>();
+		regModel = new RegistrationModel();
+		base.OnInitialized();
+	}
+
+
+	private bool IsTrying = false;
+
+	private async Task TryRegister()
+	{
+		Console.WriteLine(JsonConvert.SerializeObject(regModel));
+		ErrorAlert.Hide();
+		if (IsTrying) return;
+
+		IsTrying = true;
+
+		var request = await client.PostAsJsonAsync("api/user/register", regModel);
+
+		var result = await request.Content.ReadFromJsonAsync<UserManagerResponse>();
+
+		if (result.IsSuccess)
+		{
+			Type = Color.Info;
+			ErrorMessage = result.Message + "! Redirecting Now!";
+			Errors = new List<string>();
+			ErrorAlert.Show();
+
+			await Task.Run(() =>
+			{
+				Task.Delay(1000);
+				nav.NavigateTo("login");
+			});
+		}
+		else
+		{
+			ErrorMessage = result.Message;
+			Errors = result.Errors;
+			ErrorAlert.Show();
+		}
+
+		IsTrying = false;
+	}
+
+
+}

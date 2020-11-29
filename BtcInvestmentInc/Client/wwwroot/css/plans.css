@@ -1,0 +1,66 @@
+﻿.planCardTitle {
+	text-align: center;
+	font: normal normal bold 53px/68px Montserrat;
+	letter-spacing: 0px;
+	color: #FAC417;
+	text-shadow: 0px 2px 5px #000021;
+	opacity: 1;
+	margin: 0;
+}
+
+.card-footer {
+	text-align: center;
+	align-items: center
+}
+.card-header {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
+.planCardTitleHelper {
+	margin: 0;
+	text-align: center;
+	font: normal normal normal 24px/31px Montserrat;
+	letter-spacing: 0px;
+	color: #4D4D4D;
+	opacity: 1;
+}
+
+.money {
+	color: #1DBF73;
+}
+
+div > span {
+	font-size: 18px;
+}
+
+.mybtn {
+	background-color: #000000 !important;
+	padding: 12px 33px !important;
+	font-size: 18px !important;
+}
+
+.mybtn:hover {
+	background-color: #000000 !important;
+}
+
+.mybtn:focus {
+	background-color: #000000 !important;
+	border: none !important;
+}
+
+.headFoot {
+	background-color: #F8F8F9;
+}
+
+.head {
+	padding: 0 !important;
+}
+
+h1 {
+	margin: 0;
+}
+
+h5 {
+	padding: 0;
+}

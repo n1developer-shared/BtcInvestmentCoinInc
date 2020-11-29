@@ -1,0 +1,82 @@
+﻿@inject HttpClient client
+@page "/login"
+@using BtcInvestmentInc.Shared.ViewModel
+@using BtcInvestmentInc.Shared.Models.User
+@using Newtonsoft.Json
+@using BtcInvestmentInc.Client.Controls
+@inject AuthenticationStateProvider lap
+@inject Blazored.LocalStorage.ILocalStorageService ls
+@inject NavigationManager nav
+
+<AuthorizeView>
+	<Authorized>
+		<RedirectToHome/>
+	</Authorized>
+</AuthorizeView>
+
+<div class="container-fluid bg-dull">
+	<Row class="justify-content-center">
+		<Column class="p-0 m-0 d-none d-lg-block" ColumnSize="ColumnSize.Is7.OnWidescreen.Is6.OnFullHD">
+			<img src="images/side1.png" class="img-fluid" />
+		</Column>
+		<Column class="justify-content-center align-bottom pt-5" ColumnSize="ColumnSize.Is5.OnWidescreen.Is6.OnFullHD.Is6.OnDesktop.Is8.OnTablet.Is12.OnMobile">
+			<h1 class="text-center mb-5">Login</h1>
+
+			<Field>
+				<TextEdit Text="@authModel.Username" TextChanged="@((text)=>authModel.Username = text)" Class="my-input mb-3" Placeholder="Username"></TextEdit>
+			</Field>
+			<Field>
+				<TextEdit type="password" Text="@authModel.Password" TextChanged="@((text)=>authModel.Password= text)" Class="my-input mb-3" Placeholder="Password"></TextEdit>
+			</Field>
+			<hr />
+			<Alert @ref="@ErrorAlert" Color="Color.Danger">
+				<AlertMessage>
+					@ErrorMessages
+				</AlertMessage>
+				<CloseButton></CloseButton>
+			</Alert>
+			<Button @onclick="TryLogin" class="form-control mt-2 mb-2 primary form-button" Color="Color.Primary"> Signin </Button>
+			<hr />
+			<div class="text-center"><a href="register">Register Here</a></div>
+		</Column>
+	</Row>
+</div>
+
+@code {
+
+	AuthenticationModel authModel;
+
+	private Alert ErrorAlert;
+
+	private string ErrorMessages;
+
+	protected override void OnInitialized()
+	{
+		authModel = new AuthenticationModel();
+		base.OnInitialized();
+	}
+
+	private async void TryLogin()
+	{
+		ErrorAlert.Hide();
+
+		var response = await client.PostAsJsonAsync("api/user/authenticate", authModel);
+
+		var result = await response.Content.ReadFromJsonAsync<UserManagerResponse>();
+
+		Console.WriteLine(JsonConvert.SerializeObject(result));
+
+		if (result?.IsSuccess ?? false)
+		{
+			await ls.SetItemAsync("token", result.Message.Split('|')[0]);
+			await ls.SetItemAsync("username", result.Message.Split('|')[1]);
+			await lap.GetAuthenticationStateAsync();
+			nav.NavigateTo("/dashboard");
+		}
+		else
+		{
+			ErrorMessages = result?.Message;
+			ErrorAlert.Show();
+		}
+	}
+}

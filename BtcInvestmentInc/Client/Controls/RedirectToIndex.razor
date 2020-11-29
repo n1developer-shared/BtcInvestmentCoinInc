@@ -1,0 +1,10 @@
+﻿@inject NavigationManager nv
+@inject IJSRuntime r
+
+@code {
+	protected override void OnInitialized()
+	{
+		nv.NavigateTo("home",true);
+		base.OnInitialized();
+	}
+}

@@ -1,0 +1,173 @@
+﻿@using System.Net.Http.Headers
+@using System.Text
+@using System.Threading
+@using Blazored.LocalStorage
+@using BtcInvestmentInc.Shared.ViewModel
+@using Newtonsoft.Json
+@using JsonSerializer = System.Text.Json.JsonSerializer
+@inject IJSRuntime JsRuntime
+@inject HttpClient Client
+@inject ILocalStorageService Storage
+
+<div class="modal @_modalClass" tabindex="-1" role="dialog" style="display:@_modalDisplay">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Invest now</h5>
+				<button type="button" class="close" @onclick="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<Field>
+					<TextEdit Text="@_deposit" TextChanged="(t) => _deposit = t" type="number" Placeholder="@($"Enter amount to invest ({CurrentPlan.Min}-{CurrentPlan.Max})")"/>
+				</Field>
+				<div class="input-group">
+					<input type="text" value="@_btcRa" class="form-control" placeholder="Address will display here" readonly>
+					<div class="input-group-append">
+						<button  @onclick="CopyTextToClipboard" class="btn btn-outline-secondary" type="button">Copy</button>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<label>@_result</label>
+				@if (_showConfirmButton)
+				{
+					<button type="button" @onclick="Proceed" class="btn btn-primary">Confirm</button>
+				}
+				else
+				{
+					<button type="button" @onclick="ConfirmTransaction" class="btn btn-primary">Check Confirmation</button>
+				}
+			</div>
+		</div>
+	</div>
+</div>
+
+@if (_showBackdrop)
+{
+	@*<div class="modal-backdrop fade show"></div>*@
+}
+
+@code {
+	[Parameter]
+	public DepositPlanDetail CurrentPlan { get; set; }
+
+	private Modal _modal;
+
+	private string _deposit = "0";
+
+	private string _btcRa = "";
+
+	private string _result = "";
+
+	private bool _showConfirmButton = true;
+
+	protected override void OnInitialized()
+	{
+		CurrentPlan ??= DepositPlanDetail.CurrentPlans.First();
+		_showBackdrop = false;
+		_deposit = CurrentPlan.Max.ToString();
+		base.OnInitialized();
+	}
+
+	public void Reset()
+	{
+		_btcRa = "";
+		_result = "";
+	}
+
+	private string Id = "";
+
+	private async Task Proceed()
+	{
+		_result = "";
+		var depositDetail = new DepositDetail()
+		{
+			Amount = Convert.ToInt32(_deposit),
+			Id = CurrentPlan.Id
+		};
+
+		Console.WriteLine(JsonConvert.SerializeObject(depositDetail));
+
+		var request = new HttpRequestMessage(HttpMethod.Post, "api/user/makedeposit");
+
+		request.Content = new StringContent(JsonSerializer.Serialize(depositDetail), Encoding.UTF8, "application/json");
+
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await Storage.GetItemAsync<string>("token"));
+
+		var rr = await Client.SendAsync(request);
+
+		if (rr.IsSuccessStatusCode)
+		{
+			var result = await rr.Content.ReadFromJsonAsync<UserManagerResponse>();
+
+			if (result.IsSuccess)
+			{
+				_result = "Payment not received yet!";
+				_showConfirmButton = false;
+				_btcRa = result.Message.Split('|')[0];
+				Id = result.Message.Split('|')[1];
+			}
+			else
+			{
+				_result = result.Message;
+			}
+		}
+	}
+
+	private string _modalDisplay = "";
+	private string _modalClass = "";
+	private bool _showBackdrop = true;
+
+	public void Open()
+	{
+		_modalDisplay = "block;";
+		_modalClass = "Show";
+		_showBackdrop = true;
+		_showConfirmButton = true;
+		StateHasChanged();
+	}
+
+	public void Close()
+	{
+		_modalDisplay = "none";
+		_modalClass = "";
+		_showBackdrop = false;
+		StateHasChanged();
+	}
+
+	private async void CopyTextToClipboard()
+	{
+		await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _btcRa);
+	}
+
+	private bool _isCheck = false;
+
+	private async Task ConfirmTransaction()
+	{
+		if(_isCheck) return;
+
+		_isCheck = true;
+
+		_result = "";
+		var request = new HttpRequestMessage(HttpMethod.Get, $"api/user/confirmpayment?id={Id}");
+
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await Storage.GetItemAsync<string>("token"));
+
+		var rr = await Client.SendAsync(request);
+
+		if (rr.IsSuccessStatusCode)
+		{
+			_result = "Payment Confirmed!";
+			StateHasChanged();
+			await Task.Delay(2000);
+			Close();
+		}
+		else
+		{
+			_result = "Payment not received yet!";
+		}
+		_isCheck = false;
+	}
+}
